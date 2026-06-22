@@ -60,8 +60,8 @@
       "description": "Your Supabase service role key (keep secret!)",
       "required": true
     },
-    "ANTHROPIC_API_KEY": {
-      "description": "Your Anthropic API key for Claude",
+    "OPENAI_API_KEY": {
+      "description": "Your OpenAI API key",
       "required": true
     },
     "FIFA_API_KEY": {
