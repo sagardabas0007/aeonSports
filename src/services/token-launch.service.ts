@@ -2,6 +2,10 @@ import axios from 'axios';
 import { TokenMetadata } from '@/types/ai-analysis';
 import { LaunchPlatform } from '@/types/database';
 import { walletService } from './wallet.service';
+import { createFlaunch, ReadWriteFlaunchSDK } from '@flaunch/sdk';
+import { createPublicClient, createWalletClient, http } from 'viem';
+import { base } from 'viem/chains';
+import { privateKeyToAccount } from 'viem/accounts';
 
 export interface TokenLaunchResult {
   success: boolean;
@@ -154,63 +158,103 @@ class TokenLaunchService {
   }
 
   /**
-   * Launch token on Flaunch
-   * Note: This is a placeholder implementation. Update with actual Flaunch API endpoints.
+   * Initialize Flaunch SDK client
+   */
+  private getFlaunchClient(): ReadWriteFlaunchSDK {
+    const privateKey = process.env.TREASURY_WALLET_PRIVATE_KEY;
+    if (!privateKey) {
+      throw new Error('TREASURY_WALLET_PRIVATE_KEY not configured');
+    }
+
+    // Create viem clients for Base mainnet
+    const publicClient = createPublicClient({
+      chain: base,
+      transport: http(process.env.BASE_RPC_URL || 'https://mainnet.base.org'),
+    });
+
+    const account = privateKeyToAccount(privateKey as `0x${string}`);
+    const walletClient = createWalletClient({
+      account,
+      chain: base,
+      transport: http(process.env.BASE_RPC_URL || 'https://mainnet.base.org'),
+    });
+
+    return createFlaunch({
+      publicClient,
+      walletClient,
+    }) as ReadWriteFlaunchSDK;
+  }
+
+  /**
+   * Generate a simple placeholder image data URL for token
+   */
+  private generateTokenImage(symbol: string): string {
+    // Create a simple SVG as base64
+    const svg = `
+      <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+        <rect width="200" height="200" fill="#d24b40"/>
+        <text x="100" y="100" font-size="60" fill="white" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-weight="bold">
+          ${symbol.substring(0, 3)}
+        </text>
+      </svg>
+    `;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+  }
+
+  /**
+   * Launch token on Flaunch using SDK
    */
   private async launchOnFlaunch(metadata: TokenMetadata): Promise<TokenLaunchResult> {
     try {
-      const flaunchApiUrl = process.env.FLAUNCH_API_URL || 'https://api.flaunch.io';
-      const wallet = walletService.getWallet();
+      const flaunchClient = this.getFlaunchClient();
+      const treasuryWallet = process.env.TREASURY_WALLET_ADDRESS;
 
-      // Prepare token data
-      const tokenData = {
+      if (!treasuryWallet) {
+        throw new Error('TREASURY_WALLET_ADDRESS not configured');
+      }
+
+      // Generate token image
+      const base64Image = this.generateTokenImage(metadata.tokenSymbol);
+
+      // Launch token with Flaunch SDK
+      const hash = await flaunchClient.flaunchIPFS({
         name: metadata.tokenName,
         symbol: metadata.tokenSymbol,
-        description: metadata.description,
-        creator: wallet.address,
-        initialSupply: '1000000000', // 1 billion tokens
+        fairLaunchPercent: 0, // No fair launch window
+        fairLaunchDuration: 0, // Immediate launch
+        initialMarketCapUSD: 10_000, // $10k starting market cap (no protocol fees below $10k)
+        creator: treasuryWallet as `0x${string}`,
+        creatorFeeAllocationPercent: 100, // 100% fees to treasury
         metadata: {
-          playerName: metadata.playerName,
-          awardType: metadata.awardType,
-          match: metadata.matchInfo,
+          base64Image,
+          description: metadata.description,
+          // Optional: Add social links if available
         },
-      };
+      });
 
-      // Sign the token data
-      const message = `Launch token: ${metadata.tokenName} (${metadata.tokenSymbol})`;
-      const signature = await wallet.signMessage(message);
+      // Parse transaction to get memecoin address
+      const poolCreatedData = await flaunchClient.getPoolCreatedFromTx(hash);
 
-      // Call Flaunch API
-      const response = await axios.post(
-        `${flaunchApiUrl}/launch`,
-        {
-          ...tokenData,
-          signature,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.FLAUNCH_API_KEY || '',
-          },
-        }
-      );
+      if (!poolCreatedData) {
+        throw new Error('Failed to parse Flaunch transaction');
+      }
 
       return {
         success: true,
-        contractAddress: response.data.token.address,
-        transactionHash: response.data.transaction.hash,
+        contractAddress: poolCreatedData.memecoin,
+        transactionHash: hash,
         platform: 'flaunch',
       };
     } catch (error: any) {
       console.error('Flaunch launch error:', error);
 
-      // If Flaunch API is not configured, return a mock success for development
-      if (process.env.NODE_ENV === 'development' && !process.env.FLAUNCH_API_KEY) {
-        console.warn('Flaunch API not configured, returning mock data');
+      // If wallet is not configured, return a mock success for development
+      if (process.env.NODE_ENV === 'development' && !process.env.TREASURY_WALLET_PRIVATE_KEY) {
+        console.warn('Flaunch SDK not configured, returning mock data');
         return {
           success: true,
-          contractAddress: `0x${Math.random().toString(16).substring(2, 42)}`,
-          transactionHash: `0x${Math.random().toString(16).substring(2, 66)}`,
+          contractAddress: `0x${Math.random().toString(16).substring(2, 42).padStart(40, '0')}`,
+          transactionHash: `0x${Math.random().toString(16).substring(2, 66).padStart(64, '0')}`,
           platform: 'flaunch',
         };
       }
