@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
     }
 
-    if (match.status !== 'finished') {
+    const matchData = match as any;
+    if (matchData.status !== 'finished') {
       return NextResponse.json(
         { error: 'Can only analyze finished matches' },
         { status: 400 }
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch complete match data from FIFA API
-    const fixtureId = parseInt(match.external_id);
+    const fixtureId = parseInt(matchData.external_id);
     console.log(`[Analyze V2] Fetching FIFA data for fixture ${fixtureId}`);
 
     const { fixture, players } = await fifaApiService.getCompleteMatchData(fixtureId);

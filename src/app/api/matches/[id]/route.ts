@@ -9,11 +9,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getServiceSupabase();
-    const matchId = params.id;
+    const { id: matchId } = await params;
 
     // Get match
     const { data: match, error: matchError } = await supabase
@@ -51,7 +51,7 @@ export async function GET(
 
     return NextResponse.json({
       match: {
-        ...match,
+        ...(match as any),
         awards: awards || [],
         analysis,
       },

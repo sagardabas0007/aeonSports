@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
     }
 
-    if (match.status !== 'finished') {
+    const matchData = match as any;
+    if (matchData.status !== 'finished') {
       return NextResponse.json(
         { error: 'Can only process finished matches' },
         { status: 400 }
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch complete match data from FIFA API
-    const fixtureId = parseInt(match.external_id);
+    const fixtureId = parseInt(matchData.external_id);
     const { fixture, players } = await fifaApiService.getCompleteMatchData(fixtureId);
 
     if (!fixture) {
@@ -67,17 +68,19 @@ export async function POST(request: NextRequest) {
       if (!award) continue;
 
       // Get the match award that was created by the pipeline
+      const playerResult = await supabase
+        .from('players')
+        .select('id')
+        .eq('external_id', award.playerId.toString())
+        .single();
+
+      const playerId = (playerResult.data as any)?.id;
+
       const { data: matchAward } = await supabase
         .from('match_awards')
         .select('*')
         .eq('match_id', matchId)
-        .eq('player_id', (
-          await supabase
-            .from('players')
-            .select('id')
-            .eq('external_id', award.playerId.toString())
-            .single()
-        ).data?.id)
+        .eq('player_id', playerId)
         .single();
 
       if (!matchAward) {
@@ -85,13 +88,15 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      const matchAwardData = matchAward as any;
+
       // Generate token metadata (using old service for now)
       console.log(`Generating token metadata for ${award.playerName}...`);
       const { aiAnalysisService } = await import('@/services/ai-analysis.service');
       const tokenMetadata = await aiAnalysisService.generateTokenMetadata(
         {
           ...award,
-          awardType: matchAward.award_type,
+          awardType: matchAwardData.award_type,
           analysis: award.reasoning,
         },
         fixture
@@ -104,13 +109,13 @@ export async function POST(request: NextRequest) {
       );
 
       // Store token records
-      const tokens = [];
+      const tokens: any[] = [];
 
       if (clanker.success && clanker.contractAddress) {
         const { data: token } = await supabase
           .from('tokens')
-          .insert({
-            award_id: matchAward.id,
+          .insert([{
+            award_id: matchAwardData.id,
             token_name: tokenMetadata.tokenName,
             token_symbol: tokenMetadata.tokenSymbol,
             contract_address: clanker.contractAddress,
@@ -118,7 +123,7 @@ export async function POST(request: NextRequest) {
             description: tokenMetadata.description,
             token_metadata: tokenMetadata as any,
             transaction_hash: clanker.transactionHash,
-          })
+          }] as any)
           .select()
           .single();
 
@@ -128,8 +133,8 @@ export async function POST(request: NextRequest) {
       if (flaunch.success && flaunch.contractAddress) {
         const { data: token } = await supabase
           .from('tokens')
-          .insert({
-            award_id: matchAward.id,
+          .insert([{
+            award_id: matchAwardData.id,
             token_name: tokenMetadata.tokenName,
             token_symbol: tokenMetadata.tokenSymbol,
             contract_address: flaunch.contractAddress,
@@ -137,7 +142,7 @@ export async function POST(request: NextRequest) {
             description: tokenMetadata.description,
             token_metadata: tokenMetadata as any,
             transaction_hash: flaunch.transactionHash,
-          })
+          }] as any)
           .select()
           .single();
 
@@ -145,7 +150,7 @@ export async function POST(request: NextRequest) {
       }
 
       launchedTokens.push({
-        award: award.awardType,
+        award: matchAwardData.award_type,
         player: award.playerName,
         tokens,
         clankerResult: clanker,

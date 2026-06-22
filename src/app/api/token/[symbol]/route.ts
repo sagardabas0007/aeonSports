@@ -9,11 +9,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { symbol: string } }
+  { params }: { params: Promise<{ symbol: string }> }
 ) {
   try {
     const supabase = getServiceSupabase();
-    const symbol = params.symbol;
+    const { symbol } = await params;
 
     const { data: token, error } = await supabase
       .from('tokens')

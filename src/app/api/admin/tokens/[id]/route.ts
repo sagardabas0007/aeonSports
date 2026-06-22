@@ -9,12 +9,13 @@ export const dynamic = 'force-dynamic';
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getServiceSupabase();
+    const { id } = await params;
 
-    const { error } = await supabase.from('tokens').delete().eq('id', params.id);
+    const { error } = await supabase.from('tokens').delete().eq('id', id);
 
     if (error) throw error;
 

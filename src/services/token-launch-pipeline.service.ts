@@ -1,4 +1,4 @@
-import Anthropic from '@openai/api';
+import OpenAI from 'openai';
 import { walletService } from './wallet.service';
 import { getServiceSupabase } from '@/lib/supabase';
 import axios from 'axios';
@@ -58,7 +58,7 @@ export interface TokenLaunchOutput {
  * Complete service for generating and launching player tokens
  */
 class TokenLaunchPipelineService {
-  private anthropic: Anthropic;
+  private openai: OpenAI;
   private readonly MODEL = 'gpt-4';
 
   constructor() {
@@ -66,7 +66,7 @@ class TokenLaunchPipelineService {
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY is required');
     }
-    this.anthropic = new Anthropic({ apiKey });
+    this.openai = new OpenAI({ apiKey });
   }
 
   /**
@@ -209,19 +209,20 @@ Return ONLY a JSON object:
 }`;
 
     try {
-      const response = await this.anthropic.messages.create({
+      const response = await this.openai.chat.completions.create({
         model: this.MODEL,
         max_tokens: 512,
         temperature: 0.7, // Higher for creative token descriptions
         messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
       });
 
-      const content = response.content[0];
-      if (content.type !== 'text') {
-        throw new Error('Unexpected response from Claude');
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from OpenAI');
       }
 
-      const result = JSON.parse(content.text.trim().replace(/```json\n?|\n?```/g, ''));
+      const result = JSON.parse(content.trim().replace(/```json\n?|\n?```/g, ''));
 
       return {
         tokenName: result.tokenName,

@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
     }
 
-    if (match.status !== 'finished') {
+    const matchData = match as any;
+    if (matchData.status !== 'finished') {
       return NextResponse.json(
         { error: 'Can only analyze finished matches' },
         { status: 400 }
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch complete match data from FIFA API
-    const fixtureId = parseInt(match.external_id);
+    const fixtureId = parseInt(matchData.external_id);
     const { fixture, players, statistics } = await fifaApiService.getCompleteMatchData(
       fixtureId
     );
@@ -52,11 +53,11 @@ export async function POST(request: NextRequest) {
 
     // Store analysis report
     await supabase.from('analysis_reports').upsert(
-      {
+      [{
         match_id: matchId,
         full_analysis: analysis as any,
         model_version: 'gpt-4',
-      },
+      }] as any,
       { onConflict: 'match_id' }
     );
 
@@ -72,12 +73,12 @@ export async function POST(request: NextRequest) {
       const { data: player } = await supabase
         .from('players')
         .upsert(
-          {
+          [{
             external_id: award.playerId.toString(),
             name: award.playerName,
             team: award.team,
             player_data: {} as any,
-          },
+          }] as any,
           { onConflict: 'external_id' }
         )
         .select()
@@ -85,14 +86,15 @@ export async function POST(request: NextRequest) {
 
       if (player) {
         // Create match award
+        const playerData = player as any;
         await supabase.from('match_awards').upsert(
-          {
+          [{
             match_id: matchId,
-            player_id: player.id,
+            player_id: playerData.id,
             award_type: award.awardType,
             analysis: award.analysis,
             statistics: award.keyStats as any,
-          },
+          }] as any,
           { onConflict: 'match_id,award_type' }
         );
       }

@@ -29,7 +29,7 @@ export async function GET() {
 
       if (tokensError) throw tokensError;
 
-      const totalFees = tokens?.reduce((sum, token) => sum + (Number(token.launch_fee) || 10), 0) || 0;
+      const totalFees = (tokens as Array<{ launch_fee: number | null }>)?.reduce((sum, token) => sum + (Number(token.launch_fee) || 10), 0) || 0;
       const totalTokens = tokens?.length || 0;
 
       return NextResponse.json({
@@ -40,9 +40,9 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      total_fees: Number(feesSummary.total_fees).toFixed(2),
-      total_tokens_launched: feesSummary.total_tokens_launched,
-      last_updated: feesSummary.last_updated,
+      total_fees: Number((feesSummary as any).total_fees).toFixed(2),
+      total_tokens_launched: (feesSummary as any).total_tokens_launched,
+      last_updated: (feesSummary as any).last_updated,
     });
   } catch (error: any) {
     console.error('[Admin Fees] Error:', error);

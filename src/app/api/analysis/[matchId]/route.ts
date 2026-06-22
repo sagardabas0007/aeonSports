@@ -9,11 +9,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { matchId: string } }
+  { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
     const supabase = getServiceSupabase();
-    const matchId = params.matchId;
+    const { matchId } = await params;
 
     // Get match
     const { data: match, error: matchError } = await supabase
@@ -58,14 +58,15 @@ export async function GET(
     if (awardsError) throw awardsError;
 
     // Format analysis response
+    const matchData = match as any;
     const analysis = {
       match_id: matchId,
       match: {
-        home_team: match.home_team,
-        away_team: match.away_team,
-        home_score: match.home_score,
-        away_score: match.away_score,
-        match_date: match.match_date,
+        home_team: matchData.home_team,
+        away_team: matchData.away_team,
+        home_score: matchData.home_score,
+        away_score: matchData.away_score,
+        match_date: matchData.match_date,
       },
       mvp: null as any,
       best_defender: null as any,
@@ -75,17 +76,18 @@ export async function GET(
     // Format awards
     if (awards) {
       for (const award of awards) {
+        const awardObj = award as any;
         const awardData = {
-          player_name: award.player_name,
-          rationale: award.rationale,
-          stats: award.stats || {},
+          player_name: awardObj.player_name,
+          rationale: awardObj.rationale,
+          stats: awardObj.stats || {},
         };
 
-        if (award.award_type === 'mvp') {
+        if (awardObj.award_type === 'mvp') {
           analysis.mvp = awardData;
-        } else if (award.award_type === 'best_defender') {
+        } else if (awardObj.award_type === 'best_defender') {
           analysis.best_defender = awardData;
-        } else if (award.award_type === 'most_assists') {
+        } else if (awardObj.award_type === 'most_assists') {
           analysis.most_assists = awardData;
         }
       }

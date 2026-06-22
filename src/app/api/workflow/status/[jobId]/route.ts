@@ -9,10 +9,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
-    const job = await queueService.getJob(params.jobId);
+    const { jobId } = await params;
+    const job = await queueService.getJob(jobId);
 
     if (!job) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });

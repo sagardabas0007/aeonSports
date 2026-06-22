@@ -1,4 +1,4 @@
-import Anthropic from '@openai/api';
+import OpenAI from 'openai';
 import { getServiceSupabase } from '@/lib/supabase';
 import { ApiFootballFixture, ApiFootballPlayerStats } from '@/types/fifa-api';
 import { AwardType } from '@/types/database';
@@ -96,7 +96,7 @@ export interface MatchAnalysisOutput {
  * Production-ready service for analyzing match performance
  */
 class AiAnalysisPipelineService {
-  private anthropic: Anthropic;
+  private openai: OpenAI;
   private readonly MODEL = 'gpt-4';
   private readonly MAX_RETRIES = 3;
   private readonly TIMEOUT_MS = 30000;
@@ -108,7 +108,7 @@ class AiAnalysisPipelineService {
       throw new Error('OPENAI_API_KEY is required for AI analysis');
     }
 
-    this.anthropic = new Anthropic({ apiKey });
+    this.openai = new OpenAI({ apiKey });
   }
 
   /**
@@ -271,12 +271,12 @@ Return ONLY valid JSON, no additional text or markdown.`;
   }
 
   /**
-   * Call Claude API with retry logic
+   * Call OpenAI API with retry logic
    */
   private async callClaudeWithRetry(prompt: string, retries = 0): Promise<any> {
     try {
       const response = await Promise.race([
-        this.anthropic.messages.create({
+        this.openai.chat.completions.create({
           model: this.MODEL,
           max_tokens: 4096,
           temperature: 0.3, // Lower temperature for more consistent analysis
@@ -286,20 +286,21 @@ Return ONLY valid JSON, no additional text or markdown.`;
               content: prompt,
             },
           ],
+          response_format: { type: 'json_object' },
         }),
         this.createTimeout(this.TIMEOUT_MS),
       ]);
 
-      const content = response.content[0];
-      if (content.type !== 'text') {
-        throw new Error('Unexpected response type from Claude');
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from OpenAI');
       }
 
       // Parse JSON response
-      const cleanedText = content.text.trim().replace(/```json\n?|\n?```/g, '');
+      const cleanedText = content.trim().replace(/```json\n?|\n?```/g, '');
       return JSON.parse(cleanedText);
     } catch (error: any) {
-      console.error(`[AI Pipeline] Claude API error (attempt ${retries + 1}):`, error.message);
+      console.error(`[AI Pipeline] OpenAI API error (attempt ${retries + 1}):`, error.message);
 
       if (retries < this.MAX_RETRIES) {
         console.log(`[AI Pipeline] Retrying... (${retries + 1}/${this.MAX_RETRIES})`);
@@ -316,7 +317,7 @@ Return ONLY valid JSON, no additional text or markdown.`;
    */
   private createTimeout(ms: number): Promise<never> {
     return new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Claude API timeout')), ms);
+      setTimeout(() => reject(new Error('OpenAI API timeout')), ms);
     });
   }
 
