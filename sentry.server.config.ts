@@ -1,0 +1,15 @@
+import * as Sentry from '@sentry/nextjs';
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  
+  // Set tracesSampleRate to 1.0 to capture 100% of transactions
+  // Adjust this value in production
+  tracesSampleRate: 0.1,
+  
+  // Set profilesSampleRate to 1.0 to profile every transaction
+  // Adjust this value in production
+  profilesSampleRate: 0.1,
+  
+  environment: process.env.NODE_ENV,
+});

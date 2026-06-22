@@ -1,0 +1,120 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/sync-matches",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/process-queue",
+      "schedule": "* * * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": true
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": {
+      "description": "Your Supabase project URL",
+      "required": true
+    },
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": {
+      "description": "Your Supabase anonymous key",
+      "required": true
+    },
+    "SUPABASE_SERVICE_ROLE_KEY": {
+      "description": "Your Supabase service role key (keep secret!)",
+      "required": true
+    },
+    "ANTHROPIC_API_KEY": {
+      "description": "Your Anthropic API key for Claude",
+      "required": true
+    },
+    "FIFA_API_KEY": {
+      "description": "Your API-Football API key",
+      "required": true
+    },
+    "TREASURY_WALLET_PRIVATE_KEY": {
+      "description": "Treasury wallet private key (keep secret!)",
+      "required": true
+    },
+    "BASE_RPC_URL": {
+      "description": "Base network RPC URL",
+      "value": "https://mainnet.base.org"
+    },
+    "CRON_SECRET": {
+      "description": "Secret for authenticating cron jobs",
+      "required": true
+    },
+    "INTERNAL_API_SECRET": {
+      "description": "Secret for internal API calls",
+      "required": true
+    },
+    "NEXT_PUBLIC_APP_URL": {
+      "description": "Your app URL (e.g., https://aeonsports.vercel.app)",
+      "required": false
+    },
+    "UPSTASH_REDIS_REST_URL": {
+      "description": "Upstash Redis URL for rate limiting",
+      "required": false
+    },
+    "UPSTASH_REDIS_REST_TOKEN": {
+      "description": "Upstash Redis token for rate limiting",
+      "required": false
+    },
+    "SENTRY_DSN": {
+      "description": "Sentry DSN for error monitoring",
+      "required": false
+    },
+    "NEXT_PUBLIC_SENTRY_DSN": {
+      "description": "Sentry DSN for client-side error monitoring",
+      "required": false
+    },
+    "SENTRY_AUTH_TOKEN": {
+      "description": "Sentry auth token for uploading source maps",
+      "required": false
+    },
+    "LOG_LEVEL": {
+      "description": "Logging level (DEBUG, INFO, WARN, ERROR)",
+      "value": "INFO"
+    },
+    "ENABLE_REQUEST_LOGGING": {
+      "description": "Enable request logging",
+      "value": "true"
+    }
+  }
+}
