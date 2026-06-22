@@ -8,7 +8,7 @@ CREATE TYPE job_type AS ENUM ('match_analysis', 'token_launch', 'match_workflow'
 
 -- Jobs table
 CREATE TABLE jobs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type job_type NOT NULL,
   status job_status DEFAULT 'pending',
   priority INTEGER DEFAULT 0, -- Higher priority = processed first
@@ -26,7 +26,7 @@ CREATE TABLE jobs (
 
 -- Workflow executions table
 CREATE TABLE workflow_executions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
   status VARCHAR(50) NOT NULL DEFAULT 'pending',
   current_step VARCHAR(100),
@@ -40,7 +40,7 @@ CREATE TABLE workflow_executions (
 
 -- Events table for frontend notifications
 CREATE TABLE events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_type VARCHAR(100) NOT NULL,
   entity_type VARCHAR(50) NOT NULL, -- 'match', 'token', 'workflow'
   entity_id UUID NOT NULL,

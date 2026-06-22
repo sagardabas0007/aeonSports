@@ -1,9 +1,8 @@
 -- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Matches table
 CREATE TABLE matches (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   external_id VARCHAR(255) UNIQUE NOT NULL,
   home_team VARCHAR(255) NOT NULL,
   away_team VARCHAR(255) NOT NULL,
@@ -21,7 +20,7 @@ CREATE TABLE matches (
 
 -- Players table
 CREATE TABLE players (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   external_id VARCHAR(255) UNIQUE NOT NULL,
   name VARCHAR(255) NOT NULL,
   team VARCHAR(255) NOT NULL,
@@ -35,7 +34,7 @@ CREATE TABLE players (
 
 -- Match awards table (MVP, Best Defender, Most Assists)
 CREATE TABLE match_awards (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
   player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
   award_type VARCHAR(50) NOT NULL, -- 'mvp', 'best_defender', 'most_assists'
@@ -47,7 +46,7 @@ CREATE TABLE match_awards (
 
 -- Tokens table
 CREATE TABLE tokens (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   award_id UUID NOT NULL REFERENCES match_awards(id) ON DELETE CASCADE,
   token_name VARCHAR(255) NOT NULL,
   token_symbol VARCHAR(50) NOT NULL,
@@ -62,7 +61,7 @@ CREATE TABLE tokens (
 
 -- Analysis reports table (full match analysis)
 CREATE TABLE analysis_reports (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
   full_analysis JSONB NOT NULL, -- Complete AI analysis
   model_version VARCHAR(100),

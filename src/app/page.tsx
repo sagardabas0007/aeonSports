@@ -21,6 +21,7 @@ export default function HomePage() {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const text = 'AEONSPORTS';
@@ -70,6 +71,13 @@ export default function HomePage() {
     document.getElementById('tokens')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const copyToClipboard = () => {
+    const skillsUrl = `${window.location.origin}/SKILLS.md`;
+    navigator.clipboard.writeText(skillsUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   // Generate orbital positions for tokens
   const getOrbitalPosition = (index: number, total: number) => {
     const orbits = Math.ceil(total / 12); // Max 12 tokens per orbit
@@ -115,25 +123,39 @@ export default function HomePage() {
           </div>
 
           <p className="text-xl md:text-2xl text-gray-400 mb-4 max-w-2xl mx-auto leading-relaxed">
-            AI-powered sports tokenization platform on Base blockchain
+            AI-powered sports tokenization platform
           </p>
 
           <p className="text-sm text-gray-500 mb-12 font-mono">
             Transform player performance into tradeable on-chain assets
           </p>
 
-          <div className="flex flex-col items-center gap-4">
-            <a
-              href="/SKILLS.md"
-              download
-              className="group flex items-center gap-2 px-8 py-4 bg-[#fafafa] text-[#0a0a0a] font-semibold hover:bg-gray-200 transition-all"
-            >
-              <span>Download Trading Guide</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </a>
-            <p className="text-xs text-gray-500 font-mono">
-              SKILLS.MD • Complete guide for AI agents to trade player tokens
-            </p>
+          <div className="w-full max-w-3xl mx-auto">
+            <div className="bg-[#111] border border-gray-800 rounded-lg p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-white mb-2">Trading Guide</h3>
+                <p className="text-sm text-gray-400">
+                  Complete guide for AI agents to trade player tokens
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-black border border-gray-800 rounded px-4 py-3 overflow-hidden">
+                  <code className="text-sm text-gray-300 font-mono break-all">
+                    {typeof window !== 'undefined' ? `${window.location.origin}/SKILLS.md` : '/SKILLS.md'}
+                  </code>
+                </div>
+
+                <button
+                  onClick={copyToClipboard}
+                  className="flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded hover:bg-gray-200 transition-colors whitespace-nowrap"
+                >
+                  <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+                  {!copied && <ArrowRight className="w-4 h-4" />}
+                  {copied && <span>✓</span>}
+                </button>
+              </div>
+            </div>
           </div>
 
           <button onClick={scrollToTokens} className="mt-20 animate-bounce">
