@@ -292,7 +292,7 @@ export default function HomePage() {
               <div>
                 <div className="text-sm text-gray-500 mb-2 font-mono">AWARD TYPE</div>
                 <div className="inline-block px-4 py-2 bg-[#d24b40] bg-opacity-10 border border-[#d24b40] border-opacity-30 rounded-lg">
-                  {selectedToken.award_type.replace('_', ' ').toUpperCase()}
+                  {(selectedToken.award_type ?? '').replace(/_/g, ' ').toUpperCase() || '—'}
                 </div>
               </div>
 

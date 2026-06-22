@@ -143,7 +143,7 @@ export default function AdminDashboard() {
             <div>
               <div className="text-xs text-gray-500 mb-1 font-mono">STATUS</div>
               <div className="text-2xl font-bold text-green-500">
-                {Number(fees.total_fees) > 0 ? 'ACTIVE' : 'PENDING'}
+                {fees.total_tokens_launched > 0 ? 'ACTIVE' : 'PENDING'}
               </div>
             </div>
           </div>

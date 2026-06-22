@@ -6,6 +6,7 @@ import { Clanker } from 'clanker-sdk/v4';
 import { createPublicClient, createWalletClient, http, PublicClient } from 'viem';
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
+import sharp from 'sharp';
 
 export interface TokenLaunchResult {
   success: boolean;
@@ -181,19 +182,30 @@ class TokenLaunchService {
   }
 
   /**
-   * Generate a simple placeholder image data URL for token
+   * Generate a 200x200 PNG token image using sharp.
+   * Returns base64-encoded PNG (data URL prefix included).
    */
-  private generateTokenImage(symbol: string): string {
-    // Create a simple SVG as base64
-    const svg = `
-      <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-        <rect width="200" height="200" fill="#d24b40"/>
-        <text x="100" y="100" font-size="60" fill="white" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-weight="bold">
-          ${symbol.substring(0, 3)}
-        </text>
-      </svg>
-    `;
-    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+  private async generateTokenImage(awardType?: string): Promise<string> {
+    // Pick colour by award type
+    const colourMap: Record<string, [number, number, number]> = {
+      mvp:           [210, 75,  64],  // AeonSports red/orange
+      best_defender: [59,  130, 246], // blue
+      most_assists:  [168, 85,  247], // purple
+    };
+    const [r, g, b] = colourMap[awardType ?? ''] ?? [210, 75, 64];
+
+    const pngBuffer = await sharp({
+      create: {
+        width: 200,
+        height: 200,
+        channels: 3,
+        background: { r, g, b },
+      },
+    })
+      .png()
+      .toBuffer();
+
+    return `data:image/png;base64,${pngBuffer.toString('base64')}`;
   }
 
   /**
@@ -208,8 +220,8 @@ class TokenLaunchService {
         throw new Error('TREASURY_WALLET_ADDRESS not configured');
       }
 
-      // Generate token image
-      const base64Image = this.generateTokenImage(metadata.tokenSymbol);
+      // Generate a PNG token image (Flaunch API requires JPEG/PNG, not SVG)
+      const base64Image = await this.generateTokenImage(metadata.awardType);
 
       // Launch token with Flaunch SDK
       const hash = await flaunchClient.flaunchIPFS({
@@ -226,6 +238,14 @@ class TokenLaunchService {
           // Optional: Add social links if available
         },
       });
+
+      // Wait for the transaction to be mined before reading the receipt
+      const privateKey = process.env.TREASURY_WALLET_PRIVATE_KEY!;
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(process.env.BASE_RPC_URL || 'https://mainnet.base.org'),
+      });
+      await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
 
       // Parse transaction to get memecoin address
       const poolCreatedData = await flaunchClient.getPoolCreatedFromTx(hash);

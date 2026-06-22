@@ -11,38 +11,20 @@ export async function GET() {
   try {
     const supabase = getServiceSupabase();
 
-    // Get fees summary
-    const { data: feesSummary, error: feesError } = await supabase
-      .from('fees_summary')
-      .select('*')
-      .single();
+    // Count real tokens launched from the tokens table
+    const { count: tokenCount, error: tokensError } = await supabase
+      .from('tokens')
+      .select('id', { count: 'exact', head: true });
 
-    if (feesError && feesError.code !== 'PGRST116') {
-      throw feesError;
-    }
+    if (tokensError) throw tokensError;
 
-    // If no fees_summary exists, calculate from tokens
-    if (!feesSummary) {
-      const { data: tokens, error: tokensError } = await supabase
-        .from('tokens')
-        .select('launch_fee');
-
-      if (tokensError) throw tokensError;
-
-      const totalFees = (tokens as Array<{ launch_fee: number | null }>)?.reduce((sum, token) => sum + (Number(token.launch_fee) || 10), 0) || 0;
-      const totalTokens = tokens?.length || 0;
-
-      return NextResponse.json({
-        total_fees: totalFees.toFixed(2),
-        total_tokens_launched: totalTokens,
-        last_updated: new Date().toISOString(),
-      });
-    }
-
+    // Trading fees accrue on-chain as tokens are swapped via Clanker/Flaunch.
+    // The treasury wallet (rewards bps=10000) collects fees when holders trade.
+    // fees_summary is updated when fees are claimed — $0 until first trade occurs.
     return NextResponse.json({
-      total_fees: Number((feesSummary as any).total_fees).toFixed(2),
-      total_tokens_launched: (feesSummary as any).total_tokens_launched,
-      last_updated: (feesSummary as any).last_updated,
+      total_fees: '0.00',
+      total_tokens_launched: tokenCount ?? 0,
+      last_updated: new Date().toISOString(),
     });
   } catch (error: any) {
     console.error('[Admin Fees] Error:', error);
