@@ -1,19 +1,19 @@
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { ApiFootballFixture, ApiFootballPlayerStats } from '@/types/fifa-api';
 import { MatchAnalysis, PlayerAnalysis, TokenMetadata } from '@/types/ai-analysis';
 import { AwardType } from '@/types/database';
 
 class AiAnalysisService {
-  private openai: OpenAI;
+  private anthropic: Anthropic;
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is required');
+      throw new Error('ANTHROPIC_API_KEY is required');
     }
 
-    this.openai = new OpenAI({
+    this.anthropic = new Anthropic({
       apiKey,
     });
   }
@@ -28,8 +28,8 @@ class AiAnalysisService {
     const prompt = this.buildAnalysisPrompt(fixture, players);
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+      const response = await this.anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 4096,
         messages: [
           {
@@ -37,15 +37,14 @@ class AiAnalysisService {
             content: prompt,
           },
         ],
-        response_format: { type: 'json_object' },
       });
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No response from OpenAI');
+      const content = response.content[0];
+      if (content.type !== 'text') {
+        throw new Error('Unexpected response type from Claude');
       }
 
-      const analysisResult = JSON.parse(content);
+      const analysisResult = JSON.parse(content.text);
 
       return {
         matchId: fixture.fixture.id,
