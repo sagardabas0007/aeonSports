@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { walletService } from './wallet.service';
 import { getServiceSupabase } from '@/lib/supabase';
-import axios from 'axios';
 import { AwardType, LaunchPlatform } from '@/types/database';
+import { tokenLaunchService } from './token-launch.service';
+import { TokenMetadata as SDKTokenMetadata } from '@/types/ai-analysis';
 
 /**
  * Input for token launch
@@ -276,154 +276,52 @@ Return ONLY a JSON object:
   }
 
   /**
-   * Launch token on Clanker
+   * Convert pipeline TokenMetadata to SDK TokenMetadata format
    */
-  private async launchOnClanker(metadata: TokenMetadata): Promise<PlatformLaunchResult> {
-    try {
-      const clankerApiUrl = process.env.CLANKER_API_URL || 'https://api.clanker.world';
-      const clankerApiKey = process.env.CLANKER_API_KEY;
-
-      if (!clankerApiKey && process.env.NODE_ENV !== 'development') {
-        throw new Error('CLANKER_API_KEY not configured');
-      }
-
-      const wallet = walletService.getWallet();
-
-      const tokenData = {
-        name: metadata.tokenName,
-        symbol: metadata.tokenSymbol,
-        description: metadata.description,
-        deployer: wallet.address,
-        metadata: {
-          playerName: metadata.playerName,
-          category: metadata.category,
-          match: metadata.matchInfo,
-          platform: 'AeonSports',
-        },
-      };
-
-      // Sign the deployment request
-      const signature = await wallet.signMessage(JSON.stringify(tokenData));
-
-      const response = await axios.post(
-        `${clankerApiUrl}/deploy`,
-        {
-          ...tokenData,
-          signature,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${clankerApiKey}`,
-          },
-          timeout: 60000, // 60 second timeout
-        }
-      );
-
-      return {
-        success: true,
-        platform: 'clanker',
-        contractAddress: response.data.contractAddress,
-        transactionHash: response.data.transactionHash,
-        launchedAt: new Date().toISOString(),
-      };
-    } catch (error: any) {
-      console.error('[Token Launch] Clanker error:', error.message);
-
-      // Development mode: return mock data
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[Token Launch] Using mock Clanker data (development mode)');
-        return {
-          success: true,
-          platform: 'clanker',
-          contractAddress: `0x${Math.random().toString(16).substring(2, 42).padEnd(40, '0')}`,
-          transactionHash: `0x${Math.random().toString(16).substring(2, 66).padEnd(64, '0')}`,
-          launchedAt: new Date().toISOString(),
-        };
-      }
-
-      return {
-        success: false,
-        platform: 'clanker',
-        error: error.message,
-      };
-    }
+  private toSDKMetadata(metadata: TokenMetadata): SDKTokenMetadata {
+    const categoryToAwardType: Record<string, any> = {
+      'MVP': 'mvp',
+      'Best Defender': 'best_defender',
+      'Most Assists': 'most_assists',
+    };
+    return {
+      playerName: metadata.playerName,
+      awardType: categoryToAwardType[metadata.category] || 'mvp',
+      tokenName: metadata.tokenName,
+      tokenSymbol: metadata.tokenSymbol,
+      description: metadata.description,
+      matchInfo: metadata.matchInfo,
+    };
   }
 
   /**
-   * Launch token on Flaunch
+   * Launch token on Clanker via clanker-sdk
+   */
+  private async launchOnClanker(metadata: TokenMetadata): Promise<PlatformLaunchResult> {
+    const result = await tokenLaunchService.launchToken(this.toSDKMetadata(metadata), 'clanker');
+    return {
+      success: result.success,
+      platform: 'clanker',
+      contractAddress: result.contractAddress,
+      transactionHash: result.transactionHash,
+      error: result.error,
+      launchedAt: result.success ? new Date().toISOString() : undefined,
+    };
+  }
+
+  /**
+   * Launch token on Flaunch via @flaunch/sdk
    */
   private async launchOnFlaunch(metadata: TokenMetadata): Promise<PlatformLaunchResult> {
-    try {
-      const flaunchApiUrl = process.env.FLAUNCH_API_URL || 'https://api.flaunch.io';
-      const flaunchApiKey = process.env.FLAUNCH_API_KEY;
-
-      if (!flaunchApiKey && process.env.NODE_ENV !== 'development') {
-        throw new Error('FLAUNCH_API_KEY not configured');
-      }
-
-      const wallet = walletService.getWallet();
-
-      const tokenData = {
-        name: metadata.tokenName,
-        symbol: metadata.tokenSymbol,
-        description: metadata.description,
-        creator: wallet.address,
-        initialSupply: '1000000000', // 1 billion tokens
-        metadata: {
-          playerName: metadata.playerName,
-          category: metadata.category,
-          match: metadata.matchInfo,
-          platform: 'AeonSports',
-        },
-      };
-
-      const message = `Launch token: ${metadata.tokenName} (${metadata.tokenSymbol})`;
-      const signature = await wallet.signMessage(message);
-
-      const response = await axios.post(
-        `${flaunchApiUrl}/launch`,
-        {
-          ...tokenData,
-          signature,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': flaunchApiKey,
-          },
-          timeout: 60000,
-        }
-      );
-
-      return {
-        success: true,
-        platform: 'flaunch',
-        contractAddress: response.data.token.address,
-        transactionHash: response.data.transaction.hash,
-        launchedAt: new Date().toISOString(),
-      };
-    } catch (error: any) {
-      console.error('[Token Launch] Flaunch error:', error.message);
-
-      // Development mode: return mock data
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[Token Launch] Using mock Flaunch data (development mode)');
-        return {
-          success: true,
-          platform: 'flaunch',
-          contractAddress: `0x${Math.random().toString(16).substring(2, 42).padEnd(40, '0')}`,
-          transactionHash: `0x${Math.random().toString(16).substring(2, 66).padEnd(64, '0')}`,
-          launchedAt: new Date().toISOString(),
-        };
-      }
-
-      return {
-        success: false,
-        platform: 'flaunch',
-        error: error.message,
-      };
-    }
+    const result = await tokenLaunchService.launchToken(this.toSDKMetadata(metadata), 'flaunch');
+    return {
+      success: result.success,
+      platform: 'flaunch',
+      contractAddress: result.contractAddress,
+      transactionHash: result.transactionHash,
+      error: result.error,
+      launchedAt: result.success ? new Date().toISOString() : undefined,
+    };
   }
 
   /**

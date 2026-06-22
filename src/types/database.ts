@@ -78,34 +78,125 @@ export interface MatchWithDetails extends Match {
   analysis?: AnalysisReport;
 }
 
+export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'retrying';
+export type JobType = 'match_analysis' | 'token_launch' | 'match_workflow';
+
+export interface Job {
+  id: string;
+  type: JobType;
+  status: JobStatus;
+  priority: number;
+  payload: any;
+  result: any;
+  error: string | null;
+  attempts: number;
+  max_attempts: number;
+  scheduled_for: string;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowExecution {
+  id: string;
+  match_id: string;
+  status: string;
+  current_step: string | null;
+  steps_completed: any;
+  error: string | null;
+  started_at: string;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Event {
+  id: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string;
+  payload: any;
+  published: boolean;
+  created_at: string;
+}
+
+export interface FeesSummary {
+  id: string;
+  total_fees: number;
+  total_tokens_launched: number;
+  last_updated: string;
+  created_at: string;
+}
+
+// Pure DB row types (no relation fields) used in the Database generic
+type MatchRow = Omit<Match, never>;
+type PlayerRow = Omit<Player, never>;
+type MatchAwardRow = Omit<MatchAward, 'player' | 'match' | 'tokens'>;
+type TokenRow = Omit<Token, 'award'>;
+type AnalysisReportRow = Omit<AnalysisReport, 'match'>;
+
 export interface Database {
   public: {
     Tables: {
       matches: {
-        Row: Match;
-        Insert: Omit<Match, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Match, 'id' | 'created_at' | 'updated_at'>>;
+        Row: MatchRow;
+        Insert: Omit<MatchRow, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<MatchRow, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
       };
       players: {
-        Row: Player;
-        Insert: Omit<Player, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Player, 'id' | 'created_at' | 'updated_at'>>;
+        Row: PlayerRow;
+        Insert: Omit<PlayerRow, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<PlayerRow, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
       };
       match_awards: {
-        Row: MatchAward;
-        Insert: Omit<MatchAward, 'id' | 'created_at'>;
-        Update: Partial<Omit<MatchAward, 'id' | 'created_at'>>;
+        Row: MatchAwardRow;
+        Insert: Omit<MatchAwardRow, 'id' | 'created_at'>;
+        Update: Partial<Omit<MatchAwardRow, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       tokens: {
-        Row: Token;
-        Insert: Omit<Token, 'id' | 'created_at' | 'launched_at'>;
-        Update: Partial<Omit<Token, 'id' | 'created_at' | 'launched_at'>>;
+        Row: TokenRow;
+        Insert: Omit<TokenRow, 'id' | 'created_at' | 'launched_at'>;
+        Update: Partial<Omit<TokenRow, 'id' | 'created_at' | 'launched_at'>>;
+        Relationships: [];
       };
       analysis_reports: {
-        Row: AnalysisReport;
-        Insert: Omit<AnalysisReport, 'id' | 'created_at'>;
-        Update: Partial<Omit<AnalysisReport, 'id' | 'created_at'>>;
+        Row: AnalysisReportRow;
+        Insert: Omit<AnalysisReportRow, 'id' | 'created_at'>;
+        Update: Partial<Omit<AnalysisReportRow, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      jobs: {
+        Row: Job;
+        Insert: Omit<Job, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
+      };
+      workflow_executions: {
+        Row: WorkflowExecution;
+        Insert: Omit<WorkflowExecution, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<WorkflowExecution, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
+      };
+      events: {
+        Row: Event;
+        Insert: Omit<Event, 'id' | 'created_at'>;
+        Update: Partial<Omit<Event, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      fees_summary: {
+        Row: FeesSummary;
+        Insert: Omit<FeesSummary, 'id' | 'created_at'>;
+        Update: Partial<Omit<FeesSummary, 'id' | 'created_at'>>;
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }

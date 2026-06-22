@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Generate dynamic sitemap
  */
