@@ -1,13 +1,15 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-// Initialize Redis client
-const redis = process.env.UPSTASH_REDIS_REST_URL
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    })
-  : null;
+// Initialize Redis client only when a real URL is provided
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+const redis =
+  redisUrl && redisUrl.startsWith('https://')
+    ? new Redis({
+        url: redisUrl,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      })
+    : null;
 
 /**
  * Rate limiters for different endpoints
